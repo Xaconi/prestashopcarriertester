@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>prestashopcarriertester</name>
+	<displayName><![CDATA[Prestashop Carrier Tester]]></displayName>
+	<version><![CDATA[0.1.0]]></version>
+	<description><![CDATA[A easy-fast carrier tester for Prestashop]]></description>
+	<author><![CDATA[Nicol&aacute;s Giacconi]]></author>
+	<tab><![CDATA[shipping_logistics]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>0</need_instance>
+	<limited_countries></limited_countries>
+</module>
