@@ -1,1 +1,2 @@
-# Prestashop Carrier Tester
+# prestashopcarriertester
+A easy-fast carrier tester for Prestashop
