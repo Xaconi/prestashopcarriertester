@@ -24,12 +24,14 @@
 *  International Registered Trademark & Property of PrestaShop SA
 */
 
+// Create the tab
+$position = Tab::getNewLastPosition(13);
+
 $sql = array();
 
-$sql[] = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.'prestashopcarriertester` (
-    `id_prestashopcarriertester` int(11) NOT NULL AUTO_INCREMENT,
-    PRIMARY KEY  (`id_prestashopcarriertester`)
-) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8;';
+$sql[] = 'INSERT INTO `'._DB_PREFIX_.'tab`
+(`id_parent`,`class_name`,`module`,`position`,`active`,`hide_host_mode`)
+VALUES (13, AdminCarrierTester, prestashopcarriertester, '.$position.', 1, 0)';
 
 foreach ($sql as $query) {
     if (Db::getInstance()->execute($query) == false) {

@@ -45,6 +45,8 @@ class Prestashopcarriertester extends CarrierModule
          */
         $this->bootstrap = true;
 
+        $this->idTab = 14;
+
         parent::__construct();
 
         $this->displayName = $this->l('Prestashop Carrier Tester');
@@ -63,11 +65,18 @@ class Prestashopcarriertester extends CarrierModule
             return false;
         }
 
-        $carrier = $this->addCarrier();
-        $this->addZones($carrier);
-        $this->addGroups($carrier);
-        $this->addRanges($carrier);
-        Configuration::updateValue('PRESTASHOPCARRIERTESTER_LIVE_MODE', false);
+        $position = Tab::getNewLastPosition($this->idTab);
+
+        $sql = 'INSERT INTO `'._DB_PREFIX_.'tab`
+            (`id_parent`,`class_name`,`module`,`position`,`active`,`hide_host_mode`)
+            VALUES ('.$this->idTab.', "AdminCarrierTester", "prestashopcarriertester", '.$position.', 1, 0)';
+
+        if(Db::getInstance()->execute($sql) == false){
+            $this->_errors[] = $this->l('Error on the MySQL query');
+            return false;
+        }
+
+        // TODO cal crear els insert dels ps_tab pels idiomes...
 
         return parent::install() &&
             $this->registerHook('header') &&
@@ -78,6 +87,14 @@ class Prestashopcarriertester extends CarrierModule
     public function uninstall()
     {
         Configuration::deleteByName('PRESTASHOPCARRIERTESTER_LIVE_MODE');
+
+        $sql = 'DELETE FROM `'._DB_PREFIX_.'tab`
+        WHERE module = "prestashopcarriertester"';
+
+        if(Db::getInstance()->execute($sql) == false){
+            $this->_errors[] = $this->l('Error deleting the PrestashopCarrierTester Tab');
+            return false;
+        }
 
         return parent::uninstall();
     }

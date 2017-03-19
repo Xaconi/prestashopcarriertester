@@ -32,6 +32,9 @@
 
 $sql = array();
 
+$sql[] = 'DELETE `'._DB_PREFIX_.'tab`
+WHERE module = "prestashopcarriertester"';
+
 foreach ($sql as $query) {
     if (Db::getInstance()->execute($query) == false) {
         return false;
