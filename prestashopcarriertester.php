@@ -45,7 +45,8 @@ class Prestashopcarriertester extends CarrierModule
          */
         $this->bootstrap = true;
 
-        $this->idTab = 14;
+        $this->moduleTab = 14;
+        $this->idTab = 0;
 
         parent::__construct();
 
@@ -65,18 +66,36 @@ class Prestashopcarriertester extends CarrierModule
             return false;
         }
 
-        $position = Tab::getNewLastPosition($this->idTab);
+        $position = Tab::getNewLastPosition($this->moduleTab);
 
         $sql = 'INSERT INTO `'._DB_PREFIX_.'tab`
             (`id_parent`,`class_name`,`module`,`position`,`active`,`hide_host_mode`)
-            VALUES ('.$this->idTab.', "AdminCarrierTester", "prestashopcarriertester", '.$position.', 1, 0)';
+            VALUES ('.$this->moduleTab.', "AdminCarrierTester", "prestashopcarriertester", '.$position.', 1, 0)';
 
         if(Db::getInstance()->execute($sql) == false){
             $this->_errors[] = $this->l('Error on the MySQL query');
             return false;
         }
 
-        // TODO cal crear els insert dels ps_tab pels idiomes...
+        $languages = array();
+        $languages[] = Language::getIdByIso('es');
+        $languages[] = Language::getIdByIso('ca');
+        $languages[] = Language::getIdByIso('en');
+
+        $tabId = $this->getTabId('AdminCarrierTester');
+
+        foreach ($languages as $key => $lang) {
+            if($lang != 0){
+                $sql = 'INSERT INTO `'._DB_PREFIX_.'tab_lang`
+                (`id_tab`,`id_lang`,`name`)
+                VALUES ('.$tabId.', ' . $lang . ', "Prestashop Carrier Tester")';
+
+                if(Db::getInstance()->execute($sql) == false){
+                    $this->_errors[] = $this->l('Error on the MySQL query');
+                    return false;
+                }
+            }
+        }
 
         return parent::install() &&
             $this->registerHook('header') &&
@@ -88,11 +107,24 @@ class Prestashopcarriertester extends CarrierModule
     {
         Configuration::deleteByName('PRESTASHOPCARRIERTESTER_LIVE_MODE');
 
+        if(Tab::getIdFromClassName('AdminCarrierTester') != false)
+            $tabId = Tab::getIdFromClassName('AdminCarrierTester');
+        else
+            $tabId = 0;
+
         $sql = 'DELETE FROM `'._DB_PREFIX_.'tab`
-        WHERE module = "prestashopcarriertester"';
+        WHERE id_tab = ' . $tabId;
 
         if(Db::getInstance()->execute($sql) == false){
             $this->_errors[] = $this->l('Error deleting the PrestashopCarrierTester Tab');
+            return false;
+        }
+
+        $sql = 'DELETE FROM `'._DB_PREFIX_.'tab_lang`
+        WHERE id_tab = ' . $tabId;
+
+        if(Db::getInstance()->execute($sql) == false){
+            $this->_errors[] = $this->l('Error deleting the PrestashopCarrierTester lang Tabs');
             return false;
         }
 
@@ -330,5 +362,19 @@ class Prestashopcarriertester extends CarrierModule
          * Not needed since 1.5
          * You can identify the carrier by the id_reference
         */
+    }
+
+    public function getTabId($className){
+        $sql = 'SELECT id_tab FROM `'._DB_PREFIX_.'tab`
+        WHERE class_name = "' . $className . '"';
+
+        $tabId = Db::getInstance()->getRow($sql);
+
+        if($tabId == false){
+            $this->_errors[] = $this->l('Error deleting the PrestashopCarrierTester lang Tabs');
+            return false;
+        } else {
+            return $tabId['id_tab'];
+        }
     }
 }
