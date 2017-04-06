@@ -28,10 +28,11 @@
 		<div class="col-lg-2">
 			<p>{l s='Select a customer:'}</p>
 			<div class="input-group">
-				<input type="text" id="customer" value="">
-				<span class="input-group-addon">
-					<i class="icon-search"></i>
-				</span>
+				<select id="customersSelect" class="" name="productsSelect">
+					{foreach from=$customers item=customer name=customers}
+						<option value="{$customer.id_customer}">{$customer.firstname} {$customer.lastname}</option>
+					{/foreach}
+				</select>
 			</div>
 		</div>
 
@@ -42,8 +43,12 @@
 					<option>You have to select a customer first!</option>
 				</select>
 			</div>
-			<button id="addToCart" type="button" data-customer="'+this.id_customer+'" class="setup-customer btn btn-default pull-right">
+			<button id="addToCart" type="button" class="setup-customer btn btn-default pull-right">
 				Add to cart
+			</button>
+
+			<button id="calculateCarriers" type="button" class="setup-customer btn btn-default pull-right">
+				CalculateCarriers
 			</button>
 
 			<div class="row">
@@ -51,6 +56,15 @@
 					<div class="actualCart">
 					</div>
 				</div>
+			</div>
+		</div>
+
+		<div class="col-lg-4">
+			<p>{l s='Customer addresses:'}</p>
+			<div id="addressesInputSelect" class="input-group" style="float: left;">
+				<select id="addressesSelect" class="" name="addressesSelect">
+					<option>You have to select a customer first!</option>
+				</select>
 			</div>
 		</div>
 	</div>
@@ -65,57 +79,14 @@
 <script type="text/javascript">
 
 	// TODO vigilar els tokens i generar-los automàticament
-
-	function searchCustomers()
-	{
-		$.ajax({
-			type:"POST",
-			url : "index.php?controller=AdminCustomers&token=59e49e9169f55327c937d0be78cd318b",
-			async: true,
-			dataType: "json",
-			data : {
-				ajax: "1",
-				tab: "AdminCustomers",
-				action: "searchCustomers",
-				customer_search: $('#customer').val()
-			},
-			success : function(res)
-			{
-				if(res.found)
-				{
-					var html = '';
-					$.each(res.customers, function() {
-						html += '<div class="customerCard col-lg-4">';
-						html += '<div class="panel">';
-						html += '<div class="panel-heading">'+this.firstname+' '+this.lastname;
-						html += '<span class="pull-right">#'+this.id_customer+'</span></div>';
-						html += '<span>'+this.email+'</span><br/>';
-						html += '<span class="text-muted">'+((this.birthday != '0000-00-00') ? this.birthday : '')+'</span><br/>';
-						html += '<div class="panel-footer">';
-						html += '<a href="index.php?controller=AdminCustomers&token=59e49e9169f55327c937d0be78cd318b&id_customer='+this.id_customer+'&viewcustomer&liteDisplaying=1" class="btn btn-default fancybox"><i class="icon-search"></i> Detalles</a>';
-						html += '<button type="button" data-customer="'+this.id_customer+'" class="setup-customer btn btn-default pull-right"><i class="icon-arrow-right"></i> Elegir</button>';
-						html += '</div>';
-						html += '</div>';
-						html += '</div>';
-					});
-				}
-				else
-					html = '<div class="alert alert-warning"><i class="icon-warning-sign"></i>&nbsp;No se encontraron clientes</div>';
-				$('#customers').html(html);
-				$('#customer').val('');
-
-				$(".setup-customer").click(function(){
-					console.log("Click customer");
-					// TODO code to select customer
-					selectCustomer(this.id_customer);
-				});
-			}
-		});
-	}
+	var idCustomer = 0;
+	var idAddress = 0;
+	var products = [];
+	var firstTime = true;
 
 	function selectCustomer(customer) {
 		console.log(customer);
-
+		idCustomer = customer;
 		$.ajax({
 			type:"POST",
 			url : "index.php?controller=AdminCarrierTester&token=d477215ae7a2c34ab6276253562284cd",
@@ -130,35 +101,92 @@
 			success : function(res)
 			{
 				console.log(res);
-				$.each(res, function(key, product){
-					$("#productsSelect").append('<option value="' + product.id_product + '">' + product.name + ' -- ' + parseFloat(product.price).toFixed(2) + '€</option>');
+				/*resposta = JSON.parse(res);*/
+
+				if(firstTime){
+					$.each(res.products, function(key, product){
+						$("#productsSelect").append('<option value="' + product.id_product + '">' + product.name + ' -- ' + parseFloat(product.price).toFixed(2) + '€</option>');
+					});
+
+					$("#productsSelect").chosen({ width: '100%' }).change(function () {
+						var value = $(this).val();
+						var text = $("#productsSelect option[value='" + value + "']").text();
+						$("#productsSelect option").attr("selected", null);
+						$("#productsSelect option").each(function (key, option) {
+							if(text == $(this).text())
+								$(this).attr("selected", "selected");
+						});
+					});
+				}
+				
+				$("#addressesSelect").html('');
+				$.each(res.addresses, function(key, address){
+					$("#addressesSelect").append('<option value="' + address.id_address + '">' + address.alias + '</option>');
 				});
 
-				$("#productsSelect").chosen().change(function () {
-					var value = $(this).val();
-					var text = $("#productsSelect option[value='" + value + "']").text();
-					$("#productsSelect option").attr("selected", null);
-					$("#productsSelect option").each(function (key, option) {
-						if(text == $(this).text())
-							$(this).attr("selected", "selected");
+				$('#addressesSelect').trigger("chosen:updated");
+
+				if(firstTime){
+					$("#addressesSelect").chosen({ width: '100%' }).change(function () {
+						var value = $(this).val();
+						$("#addressesSelect option").attr("selected", null);
+						$("#addressesSelect option").each(function (key, option) {
+							if(value == $(this).val()){
+								$(this).attr("selected", "selected");
+								idAddress = value;
+							}
+						});
 					});
-				});
+				}
+
+				firstTime = false;
+			}
+		});
+	}
+
+	function calculateCarriers(){
+		console.log("Calculating carriers for customer ID " + idCustomer + " and products " + products);
+		$.ajax({
+			type:"POST",
+			url : "index.php?controller=AdminCarrierTester&token=d477215ae7a2c34ab6276253562284cd",
+			async: true,
+			dataType: "json",
+			data : {
+				ajax: "1",
+				tab: "AdminCarrierTester",
+				action: "calculateCarriers",
+				customerId: idCustomer,
+				products : products,
+				addressId : idAddress
+			},
+			success : function(res)
+			{
+				console.log(res);
 			}
 		});
 	}
 
 	$(document).ready(function () {
-		$('#customer').typeWatch({
-			captureLength: 3,
-			highlight: true,
-			wait: 100,
-			callback: function(){ 
-				searchCustomers(); 
-			}
+
+		$("#customersSelect").chosen().change(function () {
+			var value = $(this).val();
+			var text = $("#customersSelect option[value='" + value + "']").text();
+			$("#customersSelect option").attr("selected", null);
+			$("#customersSelect option").each(function (key, option) {
+				if(text == $(this).text()){
+					$(this).attr("selected", "selected");
+					selectCustomer(value);
+				}
+			});
 		});
 
 		$("#addToCart").click(function () {
-			$(".actualCart").append('<div><span>' + $("#productsSelect option[selected='selected']").text() + '</span></div>')
+			$(".actualCart").append('<div><span class="' + $("#productsSelect option[selected='selected']").val() + '">' + $("#productsSelect option[selected='selected']").text() + '</span></div>');
+			products.push($("#productsSelect option[selected='selected']").val());
+		});
+
+		$("#calculateCarriers").click(function () {
+			calculateCarriers();
 		});
 	});
 	
