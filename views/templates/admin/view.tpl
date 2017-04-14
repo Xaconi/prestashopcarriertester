@@ -25,53 +25,74 @@
 
 <div class="panel">
 	<div class="row">
-		<div class="col-lg-2">
-			<p>{l s='Select a customer:'}</p>
-			<div class="input-group">
-				<select id="customersSelect" class="" name="productsSelect">
-					{foreach from=$customers item=customer name=customers}
-						<option value="{$customer.id_customer}">{$customer.firstname} {$customer.lastname}</option>
-					{/foreach}
-				</select>
+		<div class="col-lg-4">
+			<div class="row">
+				<div class="col-lg-12">
+					<p>{l s='Select a customer:'}</p>
+					<div class="input-group">
+						<select id="customersSelect" class="" name="productsSelect">
+							{foreach from=$customers item=customer name=customers}
+								<option value="{$customer.id_customer}">{$customer.firstname} {$customer.lastname}</option>
+							{/foreach}
+						</select>
+					</div>
+				</div>
 			</div>
-		</div>
 
-		<div class="col-lg-6">
-			<p>{l s='Select the cart products:'}</p>
-			<div id="productsInputSelect" class="input-group" style="float: left;">
-				<select id="productsSelect" class="" name="productsSelect">
-					<option>You have to select a customer first!</option>
-				</select>
+			<div class="row">
+				<div class="col-lg-12 productsCol">
+					<p>{l s='Select the cart products:'}</p>
+					<div id="productsInputSelect" class="input-group" style="float: left;">
+						<select id="productsSelect" class="" name="productsSelect">
+							{foreach from=$products item=product name=products}
+								<option value="{$product.id_product}">{$product.name} -- {$product.price}€</option>
+							{/foreach}
+						</select>
+					</div>
+					<div class="col-lg-4">
+						Quantity: <input class="form-control fixed-width-m" type="number" name="quantity" />
+					</div>
+				</div>
+
+				<div class="col-lg-12 buttonCenter">
+					<button id="addToCart" type="button" class="setup-customer btn btn-default">
+						Add to cart
+					</button>
+				</div>
 			</div>
-			<button id="addToCart" type="button" class="setup-customer btn btn-default pull-right">
-				Add to cart
-			</button>
-
-			<button id="calculateCarriers" type="button" class="setup-customer btn btn-default pull-right">
-				CalculateCarriers
-			</button>
 
 			<div class="row">
 				<div class="col-lg-12">
-					<div class="actualCart">
+					<p>{l s='Customer addresses:'}</p>
+					<div id="addressesInputSelect" class="input-group" style="float: left;">
+						<select id="addressesSelect" class="" name="addressesSelect">
+							<option>You have to select a customer first!</option>
+						</select>
 					</div>
+				</div>
+			</div>
+
+			<div class="row">
+				<div class="col-lg-12 buttonCenter">
+					<button id="calculateCarriers" type="button" class="setup-customer btn btn-default">
+						Calculate Carriers
+					</button>
 				</div>
 			</div>
 		</div>
 
 		<div class="col-lg-4">
-			<p>{l s='Customer addresses:'}</p>
-			<div id="addressesInputSelect" class="input-group" style="float: left;">
-				<select id="addressesSelect" class="" name="addressesSelect">
-					<option>You have to select a customer first!</option>
-				</select>
+			<div id="actualCart" class="col-lg-10">
+				<p>Actual cart:</p>
 			</div>
 		</div>
-	</div>
 
-	<div class="row">
-		<div id="customers" class="col-lg-12">
-			
+		<div class="col-lg-4">
+			<div class="col-lg-12">
+				<p>Result carriers:</p>
+			</div>
+			<div id="resultCarriers" class="col-lg-12">
+			</div>
 		</div>
 	</div>
 </div>
@@ -82,6 +103,7 @@
 	var idCustomer = 0;
 	var idAddress = 0;
 	var products = [];
+	var quantities = [];
 	var firstTime = true;
 
 	function selectCustomer(customer) {
@@ -95,29 +117,13 @@
 			data : {
 				ajax: "1",
 				tab: "AdminCarrierTester",
-				action: "getProducts",
+				action: "getAddresses",
 				customerId: customer
 			},
 			success : function(res)
 			{
 				console.log(res);
 				/*resposta = JSON.parse(res);*/
-
-				if(firstTime){
-					$.each(res.products, function(key, product){
-						$("#productsSelect").append('<option value="' + product.id_product + '">' + product.name + ' -- ' + parseFloat(product.price).toFixed(2) + '€</option>');
-					});
-
-					$("#productsSelect").chosen({ width: '100%' }).change(function () {
-						var value = $(this).val();
-						var text = $("#productsSelect option[value='" + value + "']").text();
-						$("#productsSelect option").attr("selected", null);
-						$("#productsSelect option").each(function (key, option) {
-							if(text == $(this).text())
-								$(this).attr("selected", "selected");
-						});
-					});
-				}
 				
 				$("#addressesSelect").html('');
 				$.each(res.addresses, function(key, address){
@@ -127,7 +133,7 @@
 				$('#addressesSelect').trigger("chosen:updated");
 
 				if(firstTime){
-					$("#addressesSelect").chosen({ width: '100%' }).change(function () {
+					$("#addressesSelect").chosen().change(function () {
 						var value = $(this).val();
 						$("#addressesSelect option").attr("selected", null);
 						$("#addressesSelect option").each(function (key, option) {
@@ -162,11 +168,30 @@
 			success : function(res)
 			{
 				console.log(res);
+				$("#resultCarriers").html('');
+				$(res).each(function (key, carrier) {
+					var price = 0;
+					if(carrier.price == 0)
+						price = "Free!"
+					else
+						price = carrier.price;
+					$("#resultCarriers").append("<p>" + carrier.name + " - " + carrier.delay + " - " + price +  "€</p>");
+				});
 			}
 		});
 	}
 
 	$(document).ready(function () {
+
+		$("#productsSelect").chosen().change(function () {
+			var value = $(this).val();
+			var text = $("#productsSelect option[value='" + value + "']").text();
+			$("#productsSelect option").attr("selected", null);
+			$("#productsSelect option").each(function (key, option) {
+				if(text == $(this).text())
+					$(this).attr("selected", "selected");
+			});
+		});
 
 		$("#customersSelect").chosen().change(function () {
 			var value = $(this).val();
@@ -181,8 +206,18 @@
 		});
 
 		$("#addToCart").click(function () {
-			$(".actualCart").append('<div><span class="' + $("#productsSelect option[selected='selected']").val() + '">' + $("#productsSelect option[selected='selected']").text() + '</span></div>');
+			$("#actualCart").append('<div><span class="' + $("#productsSelect option[selected='selected']").val() + '">' + $("#productsSelect option[selected='selected']").text() + '</span> -- <span>Quantity: ' + $(".productsCol input[name='quantity']").val() + ' -- </span><span class="deleteProduct" value="' + products.length + '" style="color:red;cursor:pointer;">Delete</span></div>');
+			
+			$(".deleteProduct[value='" + products.length + "']").click(
+				function() {
+					$(this).parent().remove();
+					products.splice($(this).val(), 1);
+					quantities.splice($(this).val(), 1);
+				}
+			);
+
 			products.push($("#productsSelect option[selected='selected']").val());
+			quantities.push(parseInt($(".productsCol input[name='quantity']").val()));
 		});
 
 		$("#calculateCarriers").click(function () {

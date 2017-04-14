@@ -31,8 +31,8 @@ class AdminCarrierTesterController extends AdminController
     {
     	if(Tools::getValue("ajax") != null){
     		switch (Tools::getValue("action")) {
-    			case 'getProducts' :
-    				$this->getProducts(Tools::getValue("customerId"));
+    			case 'getAddresses' :
+    				$this->getAddresses(Tools::getValue("customerId"));
     				break;
 
                 case 'calculateCarriers' :
@@ -43,13 +43,18 @@ class AdminCarrierTesterController extends AdminController
     		// TODO Arreglar la ruta...
     		$this->addJS("http://localhost/store1611/js/jquery/plugins/jquery.typewatch.js");
     		$this->addJS("http://localhost/store1611/js/jquery/plugins/jquery.chosen.js");
+            $this->addCSS("http://localhost/store1611/modules/prestashopcarriertester/views/css/back.css");
 
             $customers = Customer::getCustomers();
+            $products = Product::getProducts($this->context->language->id, 0, 100000, 'name', 'ASC');
+            /*var_dump($products);*/
 
             $this->context->smarty->assign(
                 array(
-                    'customers' => $customers
+                    'customers' => $customers,
+                    'products' => $products,
                 ));
+
 	    	$tplPath = _PS_MODULE_DIR_ . $this->module . '/views/templates/admin/view.tpl';
 	    	$data = $this->context->smarty->createTemplate($tplPath, $this->context->smarty);
 	    	return $data->fetch();
@@ -72,13 +77,11 @@ class AdminCarrierTesterController extends AdminController
         parent::postProcess();
     }
 
-    public function getProducts($customerId){
+    public function getAddresses($customerId){
     	$idLang = $this->context->language->id;
-    	$products = Product::getProducts($idLang, 0, 10000000, 'p.id_product', 'asc');
         $customerObj = new Customer((int) $customerId);
         $addresses = $customerObj->getAddresses($this->context->language->id);
 
-        $resposta['products'] = $products;
         $resposta['addresses'] = $addresses;
     	die(json_encode($resposta));
     }
@@ -107,6 +110,10 @@ class AdminCarrierTesterController extends AdminController
         $zone = Address::getZoneById($address);
 
         $carriers = Carrier::getCarriersForOrder($zone, null, $cart);
+
+        // Save the results on logs
+
+        $cart->delete();
 
         die(json_encode($carriers));
     }
